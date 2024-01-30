@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:module-error-handler-plugin="http://www.mulesoft.org/schema/mule/module-error-handler-plugin"
+	xmlns:json-logger="http://www.mulesoft.org/schema/mule/json-logger"
+	xmlns:sharepoint="http://www.mulesoft.org/schema/mule/sharepoint"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/sharepoint http://www.mulesoft.org/schema/mule/sharepoint/current/mule-sharepoint.xsd
+http://www.mulesoft.org/schema/mule/json-logger http://www.mulesoft.org/schema/mule/json-logger/current/mule-json-logger.xsd
+http://www.mulesoft.org/schema/mule/module-error-handler-plugin http://www.mulesoft.org/schema/mule/module-error-handler-plugin/current/mule-module-error-handler-plugin.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="parsons-sharepoint-sapi-onnew-list-item"
+		doc:id="a8e0150b-0253-4f9e-86b8-fa5e87cb9509">
+		<sharepoint:created-objects
+			objectType="LIST_ITEM" doc:name="On New Objects"
+			doc:id="0f191552-5533-4685-8a49-06e1f2a5321a"
+			config-ref="Sharepoint_Sharepoint_onpremise"
+			listId="${sharepoint.list_id}">
+			<scheduling-strategy>
+				<fixed-frequency />
+			</scheduling-strategy>
+		</sharepoint:created-objects>
+		<json-logger:logger doc:name="Logger"
+			doc:id="081db1a6-0f74-4cdc-852f-c893182f2ef1"
+			config-ref="JSON_Logger_Config"
+			message="While Adding New Items" />
+		<ee:transform doc:name="Transform Message" doc:id="f8a1ffb4-4404-4bbc-8d72-4b4c9f077b09" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+   Title: payload.title,
+   Requirement_Description: payload.Requirement_x0020_Description,
+   Satisfied_By : payload.Satisfied_x0020_By
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="83c55607-541b-4e6f-86ee-20d812c293da" message="call process API or Syndeia API #[payload]"/>
+	</flow>
+	<flow name="parsons-sharepoint-sapi-get-all-items"
+		doc:id="e8440646-2c00-4154-ba3d-975942ff9573">
+		<http:listener doc:name="Listener"
+			doc:id="804fa3a3-9620-4d10-83c7-87beeb08c883"
+			config-ref="HTTP_Listener_config" path="/get-items"
+			allowedMethods="GET" />
+		<ee:transform doc:name="Transform Message" doc:id="725b874e-a3fa-4956-a940-5d2adf27c51e" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	site_url: p('sharepoint.site_url'),
+	domain: p('sharepoint.domain'),
+	username: p('sharepoint.username'),
+	password: p('sharepoint.password'),
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<json-logger:logger doc:name="Logger" doc:id="9df9455f-60df-4d12-9b31-24d801052151" config-ref="JSON_Logger_Config" message="get sharepoint username details" priority="DEBUG"/>
+		<sharepoint:list-get doc:name="List get" doc:id="0872b62f-3e95-4ae6-a9d0-dc7fa10441ed" config-ref="Sharepoint_Sharepoint_onpremise" listId="${sharepoint.list_id}"/>
+		<ee:transform doc:name="Transform Message" doc:id="0a1bc8b3-e68f-465b-a95b-bef369c6a619" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="parsons-sharepoint-sapi-add-item" doc:id="7178b9f9-cadb-438f-86ce-e457e00e79c5" >
+		<http:listener doc:name="Listener" doc:id="ab1709e9-8f9b-4ea1-a4ca-3488aee0d3cf" config-ref="HTTP_Listener_config" path="/add-list-item" allowedMethods="POST"/>
+		<ee:transform doc:name="Transform Message" doc:id="80a79118-4882-4e36-9f08-214e91c3e2cb" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "Title": payload.Title,
+    "Requirement Description": Payload.Requirement_description,
+    "Satisfied By": Payload.Satisfied_By
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<sharepoint:list-item-create listId="${sharepoint.list_id}" doc:name="List item create" doc:id="332e6337-5cd0-48d4-b760-35871379cea1" config-ref="Sharepoint_Sharepoint_onpremise">
+			<sharepoint:properties ><![CDATA[#[payload]]]></sharepoint:properties>
+		</sharepoint:list-item-create>
+		<logger level="INFO" doc:name="Logger" doc:id="54f0a2f3-dd51-473c-a91a-e10ca21f5287" message="List Item create output #[payload]"/>
+		<ee:transform doc:name="Transform Message" doc:id="8c285f7e-a16e-4415-8c0f-6aaf48a34e89" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="parsons-sharepoint-sapiFlow" doc:id="4bcec873-ca71-45b7-8e77-6ad19923177c" >
+		<http:listener doc:name="Listener" doc:id="be53a242-2281-485c-b35f-246803445bab" config-ref="HTTP_Listener_config" path="/get-all-list" allowedMethods="GET" />
+		<sharepoint:list-get-all doc:name="List get all" doc:id="19064638-db11-4316-81f5-f6d9b6c46af0" config-ref="Sharepoint_Sharepoint_onpremise"/>
+		<logger level="INFO" doc:name="Logger" doc:id="2bcfd95f-e784-40df-913a-8aca7ca14765" message="Get List All output #[payload]"/>
+		<json-logger:logger doc:name="Logger" doc:id="736d32c0-18cc-433a-8eb1-75fdd35fe05c" config-ref="JSON_Logger_Config" message="Get All List " tracePoint="AFTER_REQUEST"/>
+		<ee:transform doc:name="Transform Message" doc:id="8946f08f-29be-4210-9d30-9d136a92210e" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>

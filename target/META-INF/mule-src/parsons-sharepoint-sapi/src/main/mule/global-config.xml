@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:tls="http://www.mulesoft.org/schema/mule/tls"
+	xmlns:json-logger="http://www.mulesoft.org/schema/mule/json-logger"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:sharepoint="http://www.mulesoft.org/schema/mule/sharepoint"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/sharepoint http://www.mulesoft.org/schema/mule/sharepoint/current/mule-sharepoint.xsd
+http://www.mulesoft.org/schema/mule/json-logger http://www.mulesoft.org/schema/mule/json-logger/current/mule-json-logger.xsd
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd">
+
+	<configuration-properties
+		doc:name="Configuration properties"
+		doc:id="1a4f40e3-2dd8-4f6a-b0f5-801802ae50d0"
+		file="properties\common-config.yaml" />
+
+	<sharepoint:sharepoint-onpremise-config
+		name="Sharepoint_Sharepoint_onpremise"
+		doc:name="Sharepoint Sharepoint onpremise"
+		doc:id="8f9b5382-64a8-44a0-8020-75eb2ce9cfe8">
+		<sharepoint:ntlm-connection
+			disableCnCheck="true" siteUrl="${sharepoint.site_url}"
+			domain="${sharepoint.domain}" ntlmUsername="${sharepoint.username}"
+			ntlmPassword="${sharepoint.password}" />
+	</sharepoint:sharepoint-onpremise-config>
+
+	<http:listener-config name="HTTP_Listener_config"
+		doc:name="HTTP Listener config"
+		doc:id="97f916a5-ca79-4efc-a473-de4fc10997b7">
+		<http:listener-connection host="0.0.0.0"
+			port="8081" />
+	</http:listener-config>
+	<global-property doc:name="Global Property"
+		doc:id="b281d3e6-449b-4bd9-acd8-6880850379d9" name="mule.env"
+		value="dev" />
+	<configuration-properties
+		doc:name="Configuration properties"
+		doc:id="daecb244-a3ad-41c0-8c37-55992938ded2"
+		file="properties\config-${mule.env}.yaml" />
+	<json-logger:config name="JSON_Logger_Config"
+		doc:name="JSON Logger Config"
+		doc:id="5ee8574a-4bf5-4b7f-934b-e38002af5f09"
+		environment="${mule.env}"
+		applicationName="${json-logger.application.name}"
+		applicationVersion="${json-logger.application.version}" />
+	<configuration doc:name="Configuration"
+		doc:id="6d14a6b2-9121-4a2f-bf7a-cb36161f6224"
+		defaultErrorHandler-ref="global-error-configError_Handler" />
+
+</mule>
